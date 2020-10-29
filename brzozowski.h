@@ -13,16 +13,6 @@
 #include <algorithm>
 #include <vector>
 #include <queue>
-struct VectorHasher {
-    int operator()(const std::vector<int> &V) const {
-        int hash = V.size();
-        for(auto &i : V) {
-            hash ^= i + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-        }
-        return hash;
-    }
-};
-
 using b_transitions = std::unordered_map<int, std::pair<int, int>>;
 using to_state = std::vector<int>;
 using a_transitions = std::unordered_map<int, std::pair<to_state, to_state>>;
@@ -59,30 +49,42 @@ nfa build_nfa(b_dfa& original){
     std::vector<bool> reachable(std::get<2>(original).size());
     n_transitions n_trans;
     std::vector<int> empty;
-    n_trans.insert(std::make_pair(std::get<0>(original), std::make_pair(empty, empty)));
+    for(int i = 0; i < std::get<2>(original).size(); ++i)
+        n_trans.insert(std::make_pair(i, std::make_pair(empty, empty)));
+    int size = 0;
     for(auto & it : std::get<2>(original)){
         n_trans[it.second.first].first.push_back(it.first);
-        if (it.first != it.second.first)
+        if (it.first != it.second.first && reachable[it.first] == false) {
             reachable[it.first] = true;
+            size++;
+        }
         n_trans[it.second.second].second.push_back(it.first);
-        if (it.first != it.second.second)
+        if (it.first != it.second.second && reachable[it.first] == false) {
             reachable[it.first] = true;
+            size++;
+        }
     }
+
     int initial;
     int final_state = std::get<0>(original);
     std::vector<int> e_trans;
     if(std::get<1>(original).size() == 1)
         initial = std::get<1>(original)[0];
     else{
-        initial = std::get<2>(original).size();
+        initial = size;
         for(auto &e : std::get<1>(original)) {
             e_trans.push_back(e);
-            reachable[e] = true;
+            if(reachable[e] == false) {
+                reachable[e] = true;
+                initial++;
+            }
         }
     }
     for(int i = 0; i < reachable.size(); i++)
-        if (!reachable[i])
+        if (!reachable[i]) {
             n_trans.erase(i);
+            initial--;
+        }
     return {initial, final_state, n_trans, e_trans};
 }
 
@@ -131,6 +133,8 @@ b_dfa nfa_to_b_dfa(nfa& original){
             cont++;
             for(int i = 0; i < 2; ++i) {
                 for (const int &j : front) {
+                    if(!std::get<3>(original).empty() && j == std::get<2>(original).size())
+                        break;
                     which = i ? std::get<2>(original).at(j).second : std::get<2>(original).at(j).first;
                     for (const int &k : which)
                         if (std::find(closure.begin(), closure.end(), k) == closure.end())
