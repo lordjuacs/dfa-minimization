@@ -1,7 +1,3 @@
-//
-// Created by AIO on 28/10/2020.
-//
-
 #ifndef DFA_MINIMIZATION_BRZOZOWSKI_H
 #define DFA_MINIMIZATION_BRZOZOWSKI_H
 //
@@ -13,18 +9,13 @@
 #include <algorithm>
 #include <vector>
 #include <queue>
-using b_transitions = std::unordered_map<int, std::pair<int, int>>;
-using to_state = std::vector<int>;
-using a_transitions = std::unordered_map<int, std::pair<to_state, to_state>>;
-using n_transitions = std::unordered_map<int, std::pair<std::vector<int>, std::vector<int>>>;
-using final = std::vector<int>;
+using transitions = std::unordered_map<int, std::pair<int, int>>;
+using to_states = std::vector<int>;
+using n_transitions = std::unordered_map<int, std::pair<to_states, to_states>>;
+using dfa = std::tuple<int, std::vector<int>, transitions>;
+using nfa = std::tuple<int, int, n_transitions, std::vector<int>>;
 
-using e_transitions = std::vector<int>;
-using b_dfa = std::tuple<int, final, b_transitions>;
-using a_dfa = std::tuple<std::vector<int>, std::vector<final>, a_transitions>;
-using nfa = std::tuple<int, int, n_transitions, e_transitions>;
-
-b_dfa build_b_dfa(){
+dfa build_b_dfa(){
     int n, initial, n_final;
     std::cin >> n;
     std::cin >> initial;
@@ -32,7 +23,7 @@ b_dfa build_b_dfa(){
     std::vector<int> final_states(n_final);
     for(int i = 0; i < n_final; ++i)
         std::cin >> final_states[i];
-    b_transitions trans;
+    transitions trans;
     int from, with, to;
     for(int i = 0; i < 2*n; ++i){
         std::cin >> from;
@@ -54,7 +45,7 @@ void is_reachable(n_transitions &um, std::vector<bool> &reachable, int id){
         is_reachable(um, reachable, e);
 }
 
-nfa build_nfa(b_dfa& original){
+nfa build_nfa(dfa& original){
     n_transitions n_trans;
     std::vector<int> empty;
     for(int i = 0; i < std::get<2>(original).size(); ++i)
@@ -85,19 +76,19 @@ nfa build_nfa(b_dfa& original){
     return {initial, final_state, n_trans, e_trans};
 }
 
-b_dfa nfa_to_b_dfa(nfa& original){
+dfa nfa_to_dfa(nfa& original){
     std::vector<int> initial;
     std::vector<int> closure;
     std::vector<std::vector<int>> exists;
     std::queue<std::vector<int>> checking;
-    a_transitions trans;
+    n_transitions trans;
     initial.push_back(std::get<0>(original));
     for(const auto& e : std::get<3>(original))
         initial.push_back(e);
     std::sort(initial.begin(), initial.end());
     exists.push_back(initial);
     std::vector<int> which;
-    b_transitions final_trans;
+    transitions final_trans;
     int cont = 0;
 
     for(int i = 0; i < 2; ++i) {
@@ -148,18 +139,39 @@ b_dfa nfa_to_b_dfa(nfa& original){
         }
     }
     int pos;
-    for(auto it = trans.begin(); it != trans.end(); ++it){
-        pos = std::find(exists.begin(), exists.end(), it->second.first) - exists.begin();
-        final_trans[it->first].first = pos;
-        pos = std::find(exists.begin(), exists.end(), it->second.second) - exists.begin();
-        final_trans[it->first].second = pos;
+    for(auto & tran : trans){
+        pos = std::find(exists.begin(), exists.end(), tran.second.first) - exists.begin();
+        final_trans[tran.first].first = pos;
+        pos = std::find(exists.begin(), exists.end(), tran.second.second) - exists.begin();
+        final_trans[tran.first].second = pos;
     }
-    for (auto it = contains_final_states.begin(); it != contains_final_states.end(); ++it){
-        final_states.push_back(std::find(exists.begin(), exists.end(), *it) - exists.begin());
+    for (auto & contains_final_state : contains_final_states){
+        final_states.push_back(std::find(exists.begin(), exists.end(), contains_final_state) - exists.begin());
     }
     int final_initial = 0;
 
     return {final_initial, final_states, final_trans};
+}
+
+void question1(){
+    auto f_dfa = build_b_dfa();
+    auto f_nfa = build_nfa(f_dfa);
+    auto reverse_dfa = nfa_to_dfa(f_nfa);
+    auto reverse_nfa = build_nfa(reverse_dfa);
+    auto final = nfa_to_dfa(reverse_nfa);
+
+    std::cout << std::get<2>(final).size() << " " << std::get<0>(final) << " " << std::get<1>(final).size() << " ";
+    for(auto & e : std::get<1>(final))
+        std::cout << e << " ";
+    std::cout << std::endl;
+    for(auto & e : std::get<2>(final)){
+        std::cout << e.first << " ";
+        std::cout << "0 ";
+        std::cout << e.second.first << std::endl;
+        std::cout << e.first << " ";
+        std::cout << "1 ";
+        std::cout << e.second.second << std::endl;
+    }
 }
 //revisar el cambio de vector a int  en los ids
 
