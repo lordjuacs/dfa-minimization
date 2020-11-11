@@ -73,7 +73,11 @@ class DFA{
         std::vector<std::set<int>> exists;
         std::queue<std::set<int>> checking;
         n_transitions trans;
-        init.insert(std::get<0>(original));
+        if(std::get<0>(original) != -1)
+            init.insert(std::get<0>(original));
+        else if (std::get<3>(original).empty())
+            init.insert(std::get<0>(original));
+
         for(const auto& e : std::get<3>(original))
             init.insert(e);
         //std::sort(init.begin(), init.end());
