@@ -1,14 +1,7 @@
-#ifndef DFA_MINIMIZATION_DFA_H
-#define DFA_MINIMIZATION_DFA_H
+#pragma once
 
-#include <iostream>
-#include <unordered_map>
-#include <utility>
-#include <algorithm>
-#include <vector>
-#include <set>
-#include <queue>
-#include <unordered_set>
+#include <ctime>
+#include "undirectedGraph.h"
 
 using eqMatrix = std::vector<std::vector<int>>;
 using to_states = std::set<int>;
@@ -26,6 +19,28 @@ class DFA{
     eqMatrix matrix;
 
     // PREGUNTA 1
+    void printFinalStates()
+    {
+      std::cout << "FINAL STATES:\n";
+      for (auto it = final_states.begin(); it != final_states.end(); ++it)
+      {
+        std::cout << *it << " ";
+      }
+      std::cout << "\n";
+    }
+
+    void printTransitions()
+    {
+      std::cout << "TRANSITIONS:\n";
+      
+      for (auto it = trans.begin(); it != trans.end(); ++it)
+      {
+          std::cout << (*it).first << " 0 " << (*it).second.first << std::endl;
+          std::cout << (*it).first << " 1 " << (*it).second.second << std::endl;
+      }
+      std::cout << "\n";
+    }
+
     void is_reachable(n_transitions &um, std::vector<bool> &reachable, int id){
         if (reachable[id])
             return;
@@ -151,23 +166,25 @@ class DFA{
     void markFinalStates(eqMatrix &matrix){
         for (int i = 0; i < size; i++){
             for (int j = 0; j < i; j++){
-                if (final_states.find(i)==final_states.end() ^ final_states.find(j)==final_states.end())
+                if (final_states.find(i) == final_states.end() ^ final_states.find(j) == final_states.end())
                     matrix[i][j] = 0;
             }
         }
     }
 
-    void reachableDFA(transitions &trans, std::vector<bool> &reachable, int id){
-        if (reachable[id])
-            return;
-        reachable[id] = true;
-        reachableDFA(trans,	reachable, trans[id].first);
-        reachableDFA(trans, reachable, trans[id].second);
-    }
+    void printMatrix(eqMatrix &matrix, undirectedGraph &ugraph)
+    {
+        for (int i = 0; i < matrix[0].size(); i++)
+        {
+            for (int j = 0; j < i; j++)
+            {
+                if (matrix[i][j])
+                {
+                    ugraph.insertVertex(i);
+                    ugraph.insertVertex(j);
+                    ugraph.insertEdge(i, j);
+                }
 
-    void printMatrix(eqMatrix &matrix){
-        for (int i = 0; i < matrix[0].size(); i++){
-            for (int j = 0; j < i; j++){
                 std::cout << matrix[i][j] << " ";
             }
             std::cout << "\n";
@@ -176,8 +193,8 @@ class DFA{
 
     eqMatrix equivalencyMatrix(){
         eqMatrix matrix(size, std::vector<int>(size, 1));
-        std::vector<bool> reachable(size, false);
-        reachableDFA(trans, reachable, initial);
+        //std::vector<bool> reachable(size, false);
+        //reachableDFA(trans, reachable, initial);
         // for (int i = 0; i < dfa.size; i++){
         //     matrix[i][i] = 0;
         // }
@@ -185,7 +202,6 @@ class DFA{
         bool modified;
         do{
             modified = false;
-            // O(n^2/2 - n) => O(n^2) creo
             for (int i = 0; i < size; i++){
                 for (int j = 0; j < i; j++){
                     if (matrix[i][j]){
@@ -203,7 +219,6 @@ class DFA{
                                         modified = true;
                                     }
                                 }
-
                             }
                         }
                         else{
@@ -225,42 +240,56 @@ class DFA{
             }
         }while (modified);
 
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < i; j++) {
-                if (matrix[i][j]){
-                    if (trans[i].first >= trans[j].first){
-                        if (!matrix[trans[i].first][trans[j].first]){
-                            matrix[i][j] = 0;
-                            modified = true;
-                        }
-                    }
-                    else{
-                        if (!matrix[trans[j].first][trans[i].first]){
-                            matrix[i][j] = 0;
-                            modified = true;
-                        }
-                    }
-                    if (trans[i].second != trans[j].second){
-                        if (trans[i].second >= trans[j].second){
-                            if (!matrix[trans[i].second][trans[j].second]){
-                                matrix[i][j] = 0;
-                            }
-                        }
-                        else{
-                            if (!matrix[trans[j].second][trans[i].second]){
-                                matrix[i][j] = 0;
-                            }
-                        }
+        do
+        {
+          modified = false;
+          for (int i = 0; i < size; i++) {
+              for (int j = 0; j < i; j++) {
+                  if (matrix[i][j]){
+                      if (trans[i].first >= trans[j].first){
+                          if (!matrix[trans[i].first][trans[j].first]){
+                              matrix[i][j] = 0;
+                              modified = true;
+                          }
+                      }
+                      else {
+                          if (!matrix[trans[j].first][trans[i].first]){
+                              matrix[i][j] = 0;
+                              modified = true;
+                          }
+                      }
+                      if (trans[i].second != trans[j].second){
+                          if (trans[i].second >= trans[j].second){
+                              if (!matrix[trans[i].second][trans[j].second]){
+                                  matrix[i][j] = 0;
+                                  modified = true;
+                              }
+                          }
+                          else{
+                              if (!matrix[trans[j].second][trans[i].second]){
+                                  matrix[i][j] = 0;
+                                  modified = true;
+                              }
+                          }
 
-                    }
-                }
-            }
-        }
+                      }
+                  }
+              }
+          }
+        }while (modified);
 
 
         return matrix;
     }    
 
+    // Tester
+    void is_reachable_dfa(transitions &trans, std::vector<bool> &reachable, int id){
+        //std::cout << "ID: " << id << "\n";
+        if (reachable[id])
+            return;
+        reachable[id] = true;
+        is_reachable_dfa(trans, reachable, trans[id].first);    is_reachable_dfa(trans, reachable, trans[id].second);
+    }
   public:
     DFA(){
         int n_final;
@@ -282,40 +311,87 @@ class DFA{
             std::cin >> to;
             with? trans[from].second = to : trans[from].first = to;
         }
+
+        //printFinalStates();
+        //printTransitions();
     }
 
-    DFA(int size_){
+    DFA(int size_)
+    {
         std::cout << "\nInput\n";
         std::cout << "..................\n";        
 
         size = size_;
-        std::cout << size << " ";
-        initial = rand()%size;
-        std::cout << initial << " ";
-        int n_final = (rand()%size)/2 + 1;
-        std::cout << n_final << " ";
-        
-        for(int i = 0; i < n_final; ++i){
-            int temp;
-            temp = rand()%(size);
-            std::cout << temp << " ";
-            final_states.insert(temp);
-        }
-        
-        std::cout << std::endl;
+        int n_final, from, to;
+        bool with, all_can_be_reached;
 
-        int from, to;
-        bool with = false;
-        for(int i = 0; i < 2*size; ++i){
-            //std::cout << "i: " << i << "\n";
-            from = i/2;
-            std::cout << from << " ";
-            std::cout << with << " ";
-            to = rand()%(size);
-            std::cout << to << "\n";         
-            with = !with;
-            with? trans[from].second = to : trans[from].first = to;
+        while (!all_can_be_reached)
+        {
+            //std::cout << "Size 0: " << size << std::endl;
+            std::vector<int> possible_states;
+            std::vector<bool> reachable;
+            trans.clear();
+            final_states.clear();
+
+            //std::cout << "Size 1: " << size << std::endl;
+            for (int i = 0; i < size; ++i)
+            {
+              possible_states.push_back(i);
+            }
+
+            //std::cout << "Size 2: " << size << std::endl;
+            for (int i = 0; i < size; ++i)
+            {
+              reachable.push_back(false);
+              //std::cout << i << "\n";
+            }
+            std::cout << size << " ";
+            initial = rand()%size;
+            std::cout << initial << " ";
+            n_final = (rand()%size)/2 + 1;
+            std::cout << n_final << " ";
+            
+            for(int i = 0; i < n_final; ++i)
+            {
+                int temp = rand()%(possible_states.size());
+                int x = possible_states[temp];
+                possible_states.erase(possible_states.begin() + temp);
+                std::cout << x << " ";
+                final_states.insert(x);
+            }
+            
+            std::cout << std::endl;
+
+            with = false;
+            for (int i = 0; i < 2*size; ++i)
+            {
+                //std::cout << "i: " << i << "\n";
+                from = i/2;
+                std::cout << from << " ";
+                std::cout << with << " ";
+                to = rand()%(size);
+                std::cout << to << "\n";       
+                with? trans[from].second = to : trans[from].first = to;
+                //trans.insert({from, std::make_pair(with, to)});
+                //std::cout << ""
+                with = !with;
+            }
+
+            is_reachable_dfa(trans, reachable, initial);
+            all_can_be_reached = true;
+            for (int j = 0; j < size; ++j)
+            {
+                if (!reachable[j])
+                {
+                    std::cout << "Autómata que tiene por lo menos un estado\naislado al cual no se puede llegar\n\n";
+                    all_can_be_reached = false;
+                    break;
+                }
+            }
         }
+
+        //printFinalStates();
+        //printTransitions();        
     }
 
     ~DFA() {}
@@ -325,12 +401,20 @@ class DFA{
       return size;
     }
 
-    void question1(){
+    std::pair<int, double> question1(){
+        clock_t start, end;
+        start = clock();
+
         dfa d{initial, final_states, trans};
         nfa f_nfa = build_nfa(d);
         dfa reverse_dfa = nfa_to_dfa(f_nfa);
         nfa reverse_nfa = build_nfa(reverse_dfa);
         dfa final = nfa_to_dfa(reverse_nfa);
+
+        end = clock();
+        auto time_taken = double(end - start) / double(CLOCKS_PER_SEC);
+        std::cout << "\nTiempo de demora 1: " << time_taken << "\n"; 
+
 
         std::cout << "\nOutput: Brzozowski\n";
         std::cout << "..................\n";
@@ -345,17 +429,24 @@ class DFA{
             std::cout << e.first << " ";
             std::cout << "1 ";
             std::cout << e.second.second << std::endl;
-        }        
+        }
+        return {std::get<2>(final).size(), time_taken};
     }
 
-    void question2(){
+    std::pair<int, double> question2(){
+        clock_t start, end;
+        start = clock();
+        end = clock();
         auto matrix = equivalencyMatrix();
+        auto time_taken = double(end - start) / double(CLOCKS_PER_SEC);
+        std::cout << "\nTiempo de demora 2: " << time_taken << "\n";        
         std::cout << "\nOutput: Equivalencia de estados\n";
         std::cout << "..................";
-        printMatrix(matrix);
+        undirectedGraph ugraph;
+        printMatrix(matrix, ugraph);
+        ugraph.printGraph();
+        size = size - ugraph.connectedComponents();
+        return {size, time_taken};
+
     }
 };
-
-
-
-#endif //DFA_MINIMIZATION_DFA_H
