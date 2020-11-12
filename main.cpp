@@ -5,18 +5,8 @@
 
 int main() {
     srand(time(NULL));
-    Tester tester(100, 2);
-<<<<<<< HEAD
-    //DFA dfa;
-    //std::cout << dfa.question1() << "\n";
-    //std::cout << dfa.question2() << "\n";
-    //assert(dfa.question1() == dfa.question2());
-    //dfa.question1();
-    //dfa.question2();
-    //std::cout << dfa.getSize() << std::endl;
-    //question1();
-    //question2();
-=======
+    Tester tester(10000, 2);
+    
     /*
     DFA dfa;
     auto results1 = dfa.question1();
@@ -25,8 +15,27 @@ int main() {
     assert(results1.first == results2.first);
     // Verifico que el tiempo de ejecución de la pregunta 2 sea menor al del 1
     assert(results1.second >= results2.second);*/
->>>>>>> d5f86a686c2a8ac40763b24dce79c145fe0ecc52
 
+    /*
+      Figura 4.8 Un autómata con estados equivalentes.	// Figura 4.8 Un autómata con estados equivalentes.
+      8 0 1 2	8 0 1 2
+      0 0 1	0 0 1
+      0 1 5	0 1 5
+      1 0 6	1 0 6
+      1 1 2	1 1 2
+      2 0 0	2 0 0
+      2 1 2	2 1 2
+      3 0 2	3 0 2
+      3 1 6	3 1 6
+      4 0 7	4 0 7
+      4 1 5	4 1 5
+      5 0 2	5 0 2
+      5 1 6	5 1 6
+      6 0 6	6 0 6
+      6 1 4	6 1 4
+      7 0 6	7 0 6
+      7 1 2	7 1 2
+     */
 
     return 0;
 }
