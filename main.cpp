@@ -5,7 +5,7 @@
 
 int main() {
     srand(time(NULL));
-    Tester tester(10000, 2);
+    Tester tester(10, 2);
     //DFA dfa;
     //std::cout << dfa.question1() << "\n";
     //std::cout << dfa.question2() << "\n";
