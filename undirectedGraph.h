@@ -48,7 +48,7 @@ public:
     int connectedComponents() {
         int contConnected = 0;
         std::unordered_set<int> visited;
-        for (auto it =  nodes.begin(); it != nodes.end(); ++it) {
+        for (auto it = nodes.begin(); it != nodes.end(); ++it) {
             if (visited.find(it->first) == visited.end()) {
                 dfs(it->first, visited);
                 contConnected += v.size() - 1;
