@@ -2,7 +2,7 @@
 
 int main() {
     srand(time(NULL));
-    Tester tester(1000, 2, true);
+    Tester tester(1000, 2, false);
     
     /*
     DFA dfa;
