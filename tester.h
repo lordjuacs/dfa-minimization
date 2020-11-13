@@ -5,7 +5,7 @@
 
 class Tester {
 public:
-    Tester(int n, int m) {
+    Tester(int n, int m, bool check_time) {
         double cont = 0;
         for (int i = 0; i < n; ++i) {
             std::cout << "\nTest nro. " << i << "\n-----------------\n";
@@ -17,7 +17,8 @@ public:
             // Verifico que el nuevo size de estados totales sea el mismo
             assert(results1.first == results2.first);
             // Checking time performance: question 2 better/equal to question 1
-            //assert(results1.second >= results2.second);
+            if (check_time)
+                assert(results1.second >= results2.second);
         }
     }
 };
