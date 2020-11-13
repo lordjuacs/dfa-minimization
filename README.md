@@ -2,8 +2,8 @@
 ## Members
 - Diego Ortiz
 - Victor Ostolaza
-- Joaquín Ramírez
+- Joaquin Ramirez
 
 
 ## Professor
-- Juan Gutiérrez
+- Juan Gutierrez
