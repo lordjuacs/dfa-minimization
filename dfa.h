@@ -192,7 +192,45 @@ private:
         // }
         markFinalStates(matrix);
         bool modified;
-        
+
+        /*
+        do {	
+            modified = false;	
+            for (int i = 0; i < size; i++) {	
+                for (int j = 0; j < i; j++) {	
+                    if (matrix[i][j]) {	
+                        if (trans[i].first == trans[j].first) {	
+                            if (trans[i].second != trans[j].second) {	
+                                if (trans[i].second >= trans[j].second) {	
+                                    if (!matrix[trans[i].second][trans[j].second]) {	
+                                        matrix[i][j] = 0;	
+                                        modified = true;	
+                                    }	
+                                } else {	
+                                    if (!matrix[trans[j].second][trans[i].second]) {	
+                                        matrix[i][j] = 0;	
+                                        modified = true;	
+                                    }	
+                                }	
+                            }	
+                        } else {	
+                            if (trans[i].first >= trans[j].first) {	
+                                if (!matrix[trans[i].first][trans[j].first]) {	
+                                    matrix[i][j] = 0;	
+                                    modified = true;	
+                                }	
+                            } else {	
+                                if (!matrix[trans[j].first][trans[i].first]) {	
+                                    matrix[i][j] = 0;	
+                                    modified = true;	
+                                }	
+                            }	
+                        }	
+                    }	
+                }	
+            }	
+        } while (modified);*/
+
         do {
             modified = false;
             for (int i = 0; i < size; i++) {
