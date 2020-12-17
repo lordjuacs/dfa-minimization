@@ -1,17 +1,20 @@
 #include "tester.h"
 
 int main() {
-    srand(time(NULL));
-    Tester tester(1000, 2, false);
+    //srand(time(NULL));
+    //Tester tester(1000, 2, false);
     
-    /*
+
     DFA dfa;
-    auto results1 = dfa.question1();
-    auto results2 = dfa.question2();
+    auto result1 = dfa.question1();
+    auto result4 = dfa.question4();
+
+    //auto results1 = dfa.question1();
+    //auto results2 = dfa.question2();
     // Verifico que el nuevo size de estados totales sea el mismo
-    assert(results1.first == results2.first);
+    //assert(results1.first == results2.first);
     // Verifico que el tiempo de ejecución de la pregunta 2 sea menor al del 1
-    assert(results1.second >= results2.second);*/
+    //assert(results1.second >= results2.second);*/
 
 /*
 Figura 4.8 Un autómata con estados equivalentes.	// Figura 4.8 Un autómata con estados equivalentes.

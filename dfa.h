@@ -6,9 +6,8 @@
 #include "ds.h"
 
 struct hash_pair {
-    template <class T1, class T2>
-    size_t operator()(const std::pair<T1, T2>& p) const
-    {
+    template<class T1, class T2>
+    size_t operator()(const std::pair<T1, T2> &p) const {
         auto hash1 = std::hash<T1>{}(p.first);
         auto hash2 = std::hash<T2>{}(p.second);
         return hash1 ^ hash2;
@@ -186,7 +185,7 @@ private:
     void optimizedMarkFinalStates(eqMatrix &matrix) {
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < i; j++) {
-                if (final_states.find(i) == final_states.end() ^ final_states.find(j) == final_states.end()){
+                if (final_states.find(i) == final_states.end() ^ final_states.find(j) == final_states.end()) {
                     for (auto &dependency : dependencies[std::make_pair(i, j)])
                         matrix[dependency.first][dependency.second] = 0;
                     matrix[i][j] = 0;
@@ -258,15 +257,16 @@ private:
         return matrix;
     }
 
-    std::pair<statePair , statePair> getResultingStates(int row, int col){
-        return make_pair(std::make_pair(trans[row].first, trans[col].first), std::make_pair(trans[row].second, trans[col].second));
+    std::pair<statePair, statePair> getResultingStates(int row, int col) {
+        return make_pair(std::make_pair(trans[row].first, trans[col].first),
+                         std::make_pair(trans[row].second, trans[col].second));
     }
 
     eqMatrix optimizedEquivalencyMatrix() {
         this->matrix = eqMatrix(size, std::vector<int>(size, 1));
 
         for (int row = 0; row < size; row++)
-            for (int col = 0; col < size; col++){
+            for (int col = 0; col < size; col++) {
                 std::vector<statePair> temp;
                 auto curr = std::make_pair(row, col);
                 dependencies[curr] = temp;
@@ -395,7 +395,7 @@ public:
             }
 
             is_reachable_dfa(reachable, initial);
-            all_can_be_reached =  (reachable.size() == size);
+            all_can_be_reached = (reachable.size() == size);
             if (!all_can_be_reached)
                 std::cout << "Automata que tiene por lo menos un estado\naislado al cual no se puede llegar\n\n";
 
@@ -411,7 +411,7 @@ public:
         return size;
     }
 
-    dfa huffman_moore(eqMatrix m){
+    dfa huffman_moore(eqMatrix m, std::vector<int> to_remove) {
         std::vector<int> v;
         for (const auto &key : trans)
             v.push_back(key.first);
@@ -421,12 +421,30 @@ public:
 
         for (int row = 1; row < size; row++)
             for (int col = 0; col < row; col++)
-                if (m[row][col]){
-                    if (ds.Find(row) != ds.Find(col)){
+                if (m[row][col]) {
+                    if (ds.Find(row) != ds.Find(col)) {
                         ds.Union(row, col);
                     }
                 }
         auto sets = ds.getSets();
+        transitions new_trans;
+        std::unordered_map<int, int> numeration;
+        int cont = 0;
+        for (const auto &key: sets)
+            numeration[key.first] = cont++;
+
+        for (const auto &key: sets) {
+            new_trans[numeration[key.first]] = std::pair<int, int>();
+            new_trans[numeration[key.first]].first = numeration[ds.Find(trans[key.first].first)];
+            new_trans[numeration[key.first]].second = numeration[ds.Find(trans[key.first].second)];
+
+        }
+        int begin = numeration[ds.Find(initial)];
+        std::unordered_set<int> final;
+        for (const auto &k : final_states) {
+            final.insert(numeration[ds.Find(k)]);
+        }
+        return {begin, final, new_trans};
     }
 
     std::pair<int, double> question1() {
@@ -500,26 +518,37 @@ public:
         std::unordered_set<int> reachable;
         is_reachable_dfa(reachable, initial);
         std::vector<int> to_remove;
-        for (auto &i : trans){
-            if (reachable.find(i.first) == reachable.end()){
+        for (auto &i : trans) {
+            if (reachable.find(i.first) == reachable.end()) {
                 to_remove.push_back(i.first);
             }
-        }
-        for (const auto &i : to_remove){
+        }/*
+        for (const auto &i : to_remove) {
             trans.erase(i);
             size--;
-        }
+            for(auto)
+        }*/
 
-        auto matrix = optimizedEquivalencyMatrix();
+        auto m = optimizedEquivalencyMatrix();
+        auto huffmanMoore = huffman_moore(m, to_remove);
         end = clock();
         auto time_taken = double(end - start) / double(CLOCKS_PER_SEC);
-        std::cout << "\nTiempo de demora 2: " << time_taken << "s\n";
-        std::cout << "\nOutput: Equivalencia de estados\n";
+        std::cout << "\nTiempo de demora 4: " << time_taken << "s\n";
         std::cout << "..................";
-        undirectedGraph ugraph;
-        printMatrix(matrix, ugraph);
-        ugraph.printGraph();
-        size = size - ugraph.connectedComponents();
-        return {size, time_taken};
+        std::cout << "\nOutput: Huffman-Moore\n";
+        std::cout << "..................\n";
+        std::cout << std::get<2>(huffmanMoore).size() << " " << std::get<0>(huffmanMoore) << " " << std::get<1>(huffmanMoore).size() << " ";
+        for (auto &e : std::get<1>(huffmanMoore))
+            std::cout << e << " ";
+        std::cout << std::endl;
+        for (auto &e : std::get<2>(huffmanMoore)) {
+            std::cout << e.first << " ";
+            std::cout << "0 ";
+            std::cout << e.second.first << std::endl;
+            std::cout << e.first << " ";
+            std::cout << "1 ";
+            std::cout << e.second.second << std::endl;
+        }
+        return {std::get<1>(huffmanMoore).size(), time_taken};
     }
 };
