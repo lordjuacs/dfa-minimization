@@ -2,6 +2,17 @@
 
 #include <ctime>
 #include "undirectedGraph.h"
+#include <unordered_map>
+
+struct hash_pair {
+    template <class T1, class T2>
+    size_t operator()(const std::pair<T1, T2>& p) const
+    {
+        auto hash1 = std::hash<T1>{}(p.first);
+        auto hash2 = std::hash<T2>{}(p.second);
+        return hash1 ^ hash2;
+    }
+};
 
 using eqMatrix = std::vector<std::vector<int>>;
 using to_states = std::set<int>;
@@ -9,6 +20,8 @@ using transitions = std::unordered_map<int, std::pair<int, int>>;
 using n_transitions = std::unordered_map<int, std::pair<to_states, to_states>>;
 using nfa = std::tuple<int, int, n_transitions, std::set<int>>;
 using dfa = std::tuple<int, std::unordered_set<int>, transitions>;
+using statePair = std::pair<int, int>;
+using dependencyMap = std::unordered_map<statePair, std::vector<statePair>, hash_pair>;
 
 // {initial, final_states, trans}
 class DFA {
@@ -18,6 +31,7 @@ private:
     std::unordered_set<int> final_states;
     transitions trans;
     eqMatrix matrix;
+    dependencyMap dependencies;
 
     // PREGUNTA 1
     void printFinalStates() {
@@ -168,6 +182,24 @@ private:
         }
     }
 
+    void markAsDistinguishable(int a, int b){
+        matrix[a][b] = 0;
+        for (auto &dependency : dependencies[std::make_pair(a, b)])
+            markAsDistinguishable(dependency.first, dependency.second);
+    }
+
+    void optimizedMarkFinalStates(eqMatrix &matrix) {
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < i; j++) {
+                if (final_states.find(i) == final_states.end() ^ final_states.find(j) == final_states.end()){
+                    for (auto &dependency : dependencies[std::make_pair(i, j)])
+                        matrix[dependency.first][dependency.second] = 0;
+                    matrix[i][j] = 0;
+                }
+            }
+        }
+    }
+
     void printMatrix(eqMatrix &matrix, undirectedGraph &ugraph) {
         for (int i = 0; i < matrix[0].size(); i++) {
             for (int j = 0; j < i; j++) {
@@ -192,44 +224,6 @@ private:
         // }
         markFinalStates(matrix);
         bool modified;
-
-        /*
-        do {	
-            modified = false;	
-            for (int i = 0; i < size; i++) {	
-                for (int j = 0; j < i; j++) {	
-                    if (matrix[i][j]) {	
-                        if (trans[i].first == trans[j].first) {	
-                            if (trans[i].second != trans[j].second) {	
-                                if (trans[i].second >= trans[j].second) {	
-                                    if (!matrix[trans[i].second][trans[j].second]) {	
-                                        matrix[i][j] = 0;	
-                                        modified = true;	
-                                    }	
-                                } else {	
-                                    if (!matrix[trans[j].second][trans[i].second]) {	
-                                        matrix[i][j] = 0;	
-                                        modified = true;	
-                                    }	
-                                }	
-                            }	
-                        } else {	
-                            if (trans[i].first >= trans[j].first) {	
-                                if (!matrix[trans[i].first][trans[j].first]) {	
-                                    matrix[i][j] = 0;	
-                                    modified = true;	
-                                }	
-                            } else {	
-                                if (!matrix[trans[j].first][trans[i].first]) {	
-                                    matrix[i][j] = 0;	
-                                    modified = true;	
-                                }	
-                            }	
-                        }	
-                    }	
-                }	
-            }	
-        } while (modified);*/
 
         do {
             modified = false;
@@ -268,6 +262,55 @@ private:
 
         return matrix;
     }
+
+    std::pair<statePair , statePair> getResultingStates(int row, int col){
+        return make_pair(std::make_pair(trans[row].first, trans[col].first), std::make_pair(trans[row].second, trans[col].second));
+    }
+
+    eqMatrix optimizedEquivalencyMatrix() {
+        this->matrix = eqMatrix(size, std::vector<int>(size, 1));
+
+        for (int row = 0; row < size; row++)
+            for (int col = 0; col < size; col++){
+                std::vector<statePair> temp;
+                auto curr = std::make_pair(row, col);
+                dependencies[curr] = temp;
+                auto transitions = getResultingStates(row, col);
+                if (dependencies.find(transitions.first) != dependencies.end())
+                    dependencies[transitions.first].push_back(curr);
+                if (dependencies.find(transitions.second) != dependencies.end())
+                    dependencies[transitions.second].push_back(curr);
+            }
+
+        optimizedMarkFinalStates(matrix);
+
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < i; j++) {
+                if (matrix[i][j]) {
+                    if (trans[i].first >= trans[j].first) {
+                        if (!matrix[trans[i].first][trans[j].first])
+                            matrix[i][j] = 0;
+                    } else {
+                        if (!matrix[trans[j].first][trans[i].first])
+                            matrix[i][j] = 0;
+                    }
+                    if (trans[i].second != trans[j].second) {
+                        if (trans[i].second >= trans[j].second) {
+                            if (!matrix[trans[i].second][trans[j].second])
+                                matrix[i][j] = 0;
+                        } else {
+                            if (!matrix[trans[j].second][trans[i].second])
+                                matrix[i][j] = 0;
+                        }
+
+                    }
+                }
+            }
+        }
+
+        return matrix;
+    }
+
 
     // Tester
     void is_reachable_dfa(transitions &trans, std::vector<bool> &reachable, int id) {
@@ -372,7 +415,7 @@ public:
         }
 
         //printFinalStates();
-        //printTransitions();        
+        //printTransitions();
     }
 
     ~DFA() {}
@@ -417,6 +460,23 @@ public:
         clock_t start, end;
         start = clock();
         auto matrix = equivalencyMatrix();
+        end = clock();
+        auto time_taken = double(end - start) / double(CLOCKS_PER_SEC);
+        std::cout << "\nTiempo de demora 2: " << time_taken << "s\n";
+        std::cout << "\nOutput: Equivalencia de estados\n";
+        std::cout << "..................";
+        undirectedGraph ugraph;
+        printMatrix(matrix, ugraph);
+        ugraph.printGraph();
+        size = size - ugraph.connectedComponents();
+        return {size, time_taken};
+
+    }
+
+    std::pair<int, double> question3() {
+        clock_t start, end;
+        start = clock();
+        auto matrix = optimizedEquivalencyMatrix();
         end = clock();
         auto time_taken = double(end - start) / double(CLOCKS_PER_SEC);
         std::cout << "\nTiempo de demora 2: " << time_taken << "s\n";
