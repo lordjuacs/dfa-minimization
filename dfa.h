@@ -3,6 +3,7 @@
 #include <ctime>
 #include "undirectedGraph.h"
 #include <unordered_map>
+#include "ds.h"
 
 struct hash_pair {
     template <class T1, class T2>
@@ -182,12 +183,6 @@ private:
         }
     }
 
-    void markAsDistinguishable(int a, int b){
-        matrix[a][b] = 0;
-        for (auto &dependency : dependencies[std::make_pair(a, b)])
-            markAsDistinguishable(dependency.first, dependency.second);
-    }
-
     void optimizedMarkFinalStates(eqMatrix &matrix) {
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < i; j++) {
@@ -313,13 +308,13 @@ private:
 
 
     // Tester
-    void is_reachable_dfa(transitions &trans, std::vector<bool> &reachable, int id) {
+    void is_reachable_dfa(std::unordered_set<int> &reachable, int id) {
         //std::cout << "ID: " << id << "\n";
-        if (reachable[id])
+        if (reachable.find(id) != reachable.end())
             return;
-        reachable[id] = true;
-        is_reachable_dfa(trans, reachable, trans[id].first);
-        is_reachable_dfa(trans, reachable, trans[id].second);
+        reachable.insert(id);
+        is_reachable_dfa(reachable, trans[id].first);
+        is_reachable_dfa(reachable, trans[id].second);
     }
 
 public:
@@ -359,7 +354,7 @@ public:
         while (!all_can_be_reached) {
             //std::cout << "Size 0: " << size << std::endl;
             std::vector<int> possible_states;
-            std::vector<bool> reachable;
+            std::unordered_set<int> reachable;
             trans.clear();
             final_states.clear();
 
@@ -369,10 +364,6 @@ public:
             }
 
             //std::cout << "Size 2: " << size << std::endl;
-            for (int i = 0; i < size; ++i) {
-                reachable.push_back(false);
-                //std::cout << i << "\n";
-            }
             std::cout << size << " ";
             initial = rand() % size;
             std::cout << initial << " ";
@@ -403,15 +394,11 @@ public:
                 with = !with;
             }
 
-            is_reachable_dfa(trans, reachable, initial);
-            all_can_be_reached = true;
-            for (int j = 0; j < size; ++j) {
-                if (!reachable[j]) {
-                    std::cout << "Automata que tiene por lo menos un estado\naislado al cual no se puede llegar\n\n";
-                    all_can_be_reached = false;
-                    break;
-                }
-            }
+            is_reachable_dfa(reachable, initial);
+            all_can_be_reached =  (reachable.size() == size);
+            if (!all_can_be_reached)
+                std::cout << "Automata que tiene por lo menos un estado\naislado al cual no se puede llegar\n\n";
+
         }
 
         //printFinalStates();
@@ -422,6 +409,24 @@ public:
 
     int getSize() {
         return size;
+    }
+
+    dfa huffman_moore(eqMatrix m){
+        std::vector<int> v;
+        for (const auto &key : trans)
+            v.push_back(key.first);
+
+        DisjoinSetTree<int> ds(v);
+        ds.MakeSet();
+
+        for (int row = 1; row < size; row++)
+            for (int col = 0; col < row; col++)
+                if (m[row][col]){
+                    if (ds.Find(row) != ds.Find(col)){
+                        ds.Union(row, col);
+                    }
+                }
+        auto sets = ds.getSets();
     }
 
     std::pair<int, double> question1() {
@@ -487,6 +492,34 @@ public:
         ugraph.printGraph();
         size = size - ugraph.connectedComponents();
         return {size, time_taken};
+    }
 
+    std::pair<int, double> question4() {
+        clock_t start, end;
+        start = clock();
+        std::unordered_set<int> reachable;
+        is_reachable_dfa(reachable, initial);
+        std::vector<int> to_remove;
+        for (auto &i : trans){
+            if (reachable.find(i.first) == reachable.end()){
+                to_remove.push_back(i.first);
+            }
+        }
+        for (const auto &i : to_remove){
+            trans.erase(i);
+            size--;
+        }
+
+        auto matrix = optimizedEquivalencyMatrix();
+        end = clock();
+        auto time_taken = double(end - start) / double(CLOCKS_PER_SEC);
+        std::cout << "\nTiempo de demora 2: " << time_taken << "s\n";
+        std::cout << "\nOutput: Equivalencia de estados\n";
+        std::cout << "..................";
+        undirectedGraph ugraph;
+        printMatrix(matrix, ugraph);
+        ugraph.printGraph();
+        size = size - ugraph.connectedComponents();
+        return {size, time_taken};
     }
 };
