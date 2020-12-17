@@ -182,13 +182,20 @@ private:
         }
     }
 
-    void optimizedMarkFinalStates(eqMatrix &matrix) {
+    void optimizedMarkFinalStates(eqMatrix &, std::queue<statePair> &q) {
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < i; j++) {
                 if (final_states.find(i) == final_states.end() ^ final_states.find(j) == final_states.end()) {
-                    for (auto &dependency : dependencies[std::make_pair(i, j)])
-                        matrix[dependency.first][dependency.second] = 0;
+                    for (auto &dependency : dependencies[std::make_pair(i, j)]) {
+                        if (matrix[dependency.first][dependency.second]) {
+                            matrix[dependency.first][dependency.second] = 0;
+                            q.push(std::make_pair(dependency.first, dependency.second));
+                        }
+                        //matrix[dependency.first][dependency.second] = 0;
+                        //matrix[dependency.second][dependency.first] = 0;
+                    }
                     matrix[i][j] = 0;
+                    //matrix[j][i] = 0;
                 }
             }
         }
@@ -263,51 +270,54 @@ private:
     }
 
     eqMatrix optimizedEquivalencyMatrix() {
+        this->matrix.clear();
         this->matrix = eqMatrix(size, std::vector<int>(size, 1));
-
-        for (int row = 0; row < size; row++)
+        statePair curr;
+        std::pair<statePair, statePair> transitions;
+        for (int row = 0; row < size; row++) {
             for (int col = 0; col < size; col++) {
-                std::vector<statePair> temp;
-                auto curr = std::make_pair(row, col);
-                dependencies[curr] = temp;
-                auto transitions = getResultingStates(row, col);
-                if (dependencies.find(transitions.first) != dependencies.end())
+                if (row != col) {
+                    curr = std::make_pair(row, col);
+                    transitions = getResultingStates(row, col);
                     dependencies[transitions.first].push_back(curr);
-                if (dependencies.find(transitions.second) != dependencies.end())
                     dependencies[transitions.second].push_back(curr);
-            }
-
-        optimizedMarkFinalStates(matrix);
-
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < i; j++) {
-                if (matrix[i][j]) {
-                    if (trans[i].first >= trans[j].first) {
-                        if (!matrix[trans[i].first][trans[j].first])
-                            matrix[i][j] = 0;
-                    } else {
-                        if (!matrix[trans[j].first][trans[i].first])
-                            matrix[i][j] = 0;
-                    }
-                    if (trans[i].second != trans[j].second) {
-                        if (trans[i].second >= trans[j].second) {
-                            if (!matrix[trans[i].second][trans[j].second])
-                                matrix[i][j] = 0;
-                        } else {
-                            if (!matrix[trans[j].second][trans[i].second])
-                                matrix[i][j] = 0;
-                        }
-
-                    }
                 }
             }
         }
 
+        std::queue<statePair> q;
+        bool i_f, j_f;
+        for (int i = 0; i < size; ++i) {
+            for (int j = 0; j < size; ++j) {
+                if (i != j && matrix[i][j]) {
+                    i_f = final_states.find(i) != final_states.end();
+                    j_f = final_states.find(j) != final_states.end();
+                    if (i_f ^ j_f) {
+                        matrix[i][j] = 0;
+                        curr = std::make_pair(i, j);
+                        for (const auto &dep : dependencies[curr]) {
+                            matrix[dep.first][dep.second] = 0;
+                            q.push(dep);
+                        }
+                        while (!q.empty()) {
+                            auto f = q.front();
+                            q.pop();
+                            for (const auto &deep_dep : dependencies[f]) {
+                                if (matrix[deep_dep.first][deep_dep.second]) {
+                                    matrix[deep_dep.first][deep_dep.second] = 0;
+                                    q.push(deep_dep);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         return matrix;
     }
 
 
-    // Tester
+// Tester
     void is_reachable_dfa(std::unordered_set<int> &reachable, int id) {
         //std::cout << "ID: " << id << "\n";
         if (reachable.find(id) != reachable.end())
@@ -318,6 +328,7 @@ private:
     }
 
 public:
+
     DFA() {
         int n_final;
 
@@ -405,13 +416,15 @@ public:
         //printTransitions();
     }
 
-    ~DFA() {}
+    ~
+
+    DFA() {}
 
     int getSize() {
         return size;
     }
 
-    dfa huffman_moore(eqMatrix m, std::vector<int> to_remove) {
+    dfa huffman_moore(eqMatrix m) {
         std::vector<int> v;
         for (const auto &key : trans)
             v.push_back(key.first);
@@ -491,8 +504,7 @@ public:
         undirectedGraph ugraph;
         printMatrix(matrix, ugraph);
         ugraph.printGraph();
-        size = size - ugraph.connectedComponents();
-        return {size, time_taken};
+        return {size - ugraph.connectedComponents(), time_taken};
 
     }
 
@@ -502,14 +514,14 @@ public:
         auto matrix = optimizedEquivalencyMatrix();
         end = clock();
         auto time_taken = double(end - start) / double(CLOCKS_PER_SEC);
-        std::cout << "\nTiempo de demora 2: " << time_taken << "s\n";
-        std::cout << "\nOutput: Equivalencia de estados\n";
+        std::cout << "\nTiempo de demora 3: " << time_taken << "s\n";
+        std::cout << "\nOutput: Equivalencia de estados - Optimizacion\n";
         std::cout << "..................";
         undirectedGraph ugraph;
         printMatrix(matrix, ugraph);
         ugraph.printGraph();
-        size = size - ugraph.connectedComponents();
-        return {size, time_taken};
+        dependencies.clear();
+        return {size - ugraph.connectedComponents(), time_taken};
     }
 
     std::pair<int, double> question4() {
@@ -518,26 +530,47 @@ public:
         std::unordered_set<int> reachable;
         is_reachable_dfa(reachable, initial);
         std::vector<int> to_remove;
-        for (auto &i : trans) {
-            if (reachable.find(i.first) == reachable.end()) {
+        for (auto &i : trans)
+            if (reachable.find(i.first) == reachable.end())
                 to_remove.push_back(i.first);
-            }
-        }/*
+
+        std::sort(to_remove.begin(), to_remove.end());
+        transitions temp;
+        int cont = 0;
         for (const auto &i : to_remove) {
-            trans.erase(i);
+            for (const auto &e : trans) {
+                if (e.first < (i - cont)) {
+                    int with_0 = e.second.first > (i - cont) ? e.second.first - 1 : e.second.first;
+                    int with_1 = e.second.second > i ? e.second.second - 1 : e.second.second;
+                    temp[e.first] = std::make_pair(with_0, with_1);
+                } else if (e.first > (i - cont)) {
+                    int with_0 = e.second.first > (i - cont) ? e.second.first - 1 : e.second.first;
+                    int with_1 = e.second.second > (i - cont) ? e.second.second - 1 : e.second.second;
+                    temp[e.first - 1] = std::make_pair(with_0, with_1);
+                    auto it = final_states.find(e.first);
+                    if (it != final_states.end()) {
+                        final_states.erase(e.first);
+                        final_states.insert(e.first - 1);
+                    }
+
+                }
+            }
+            trans = temp;
+            temp.clear();
+            cont++;
             size--;
-            for(auto)
-        }*/
+        }
 
         auto m = optimizedEquivalencyMatrix();
-        auto huffmanMoore = huffman_moore(m, to_remove);
+        auto huffmanMoore = huffman_moore(m);
         end = clock();
         auto time_taken = double(end - start) / double(CLOCKS_PER_SEC);
         std::cout << "\nTiempo de demora 4: " << time_taken << "s\n";
         std::cout << "..................";
         std::cout << "\nOutput: Huffman-Moore\n";
         std::cout << "..................\n";
-        std::cout << std::get<2>(huffmanMoore).size() << " " << std::get<0>(huffmanMoore) << " " << std::get<1>(huffmanMoore).size() << " ";
+        std::cout << std::get<2>(huffmanMoore).size() << " " << std::get<0>(huffmanMoore) << " "
+                  << std::get<1>(huffmanMoore).size() << " ";
         for (auto &e : std::get<1>(huffmanMoore))
             std::cout << e << " ";
         std::cout << std::endl;
@@ -549,6 +582,7 @@ public:
             std::cout << "1 ";
             std::cout << e.second.second << std::endl;
         }
-        return {std::get<1>(huffmanMoore).size(), time_taken};
+        return {std::get<2>(huffmanMoore).size(), time_taken};
     }
+
 };
