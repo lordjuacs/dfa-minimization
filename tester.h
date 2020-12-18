@@ -8,7 +8,7 @@ public:
     Tester(int n, int m, bool check_time) {
         for (int i = 0; i < n; ++i) {
             std::cout << "\nTest nro. " << i << "\n-----------------\n";
-            DFA dfa(rand() % 6 + m);
+            DFA dfa(m);
             //dfa.question1();
             //dfa.question2();
             auto results1 = dfa.question1();
