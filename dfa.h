@@ -29,7 +29,9 @@ private:
     int size;
     int initial;
     std::unordered_set<int> final_states;
+    std::unordered_set<int> copy_final;
     transitions trans;
+    transitions copy_trans;
     eqMatrix matrix;
     dependencyMap dependencies;
 
@@ -352,6 +354,8 @@ public:
 
         //printFinalStates();
         //printTransitions();
+        copy_final = final_states;
+        copy_trans = trans;
     }
 
     DFA(int size_) {
@@ -416,9 +420,7 @@ public:
         //printTransitions();
     }
 
-    ~
-
-    DFA() {}
+    ~DFA() {}
 
     int getSize() {
         return size;
@@ -459,6 +461,133 @@ public:
         }
         return {begin, final, new_trans};
     }
+
+    std::unordered_set<int> get_X(std::unordered_set<int> &A, int c) {
+        std::unordered_set<int> X;
+        for (const auto &key : trans) {
+            if (c) {
+                if (A.find(trans[key.first].second) != A.end())
+                    X.insert(key.first);
+            } else {
+                if (A.find(trans[key.first].first) != A.end())
+                    X.insert(key.first);
+            }
+        }
+        return X;
+    }
+
+    struct setPresent {
+        std::set<int> conj;
+        bool present;
+    };
+
+    std::vector<std::unordered_set<int>> hopcroft() {
+        trans = copy_trans;
+        final_states = copy_final;
+        std::vector<std::unordered_set<int>> P;
+        std::vector<std::unordered_set<int>> W;
+        std::unordered_set<int> sub;
+        for (const auto &k : final_states)
+            sub.insert(k);
+        P.push_back(sub);
+        W.push_back(sub);
+        sub.clear();
+        for (const auto &key : trans)
+            if (final_states.find(key.first) == final_states.end())
+                sub.insert(key.first);
+        P.push_back(sub);
+        W.push_back(sub);
+        std::unordered_set<int> A;
+        std::unordered_set<int> X;
+        std::unordered_set<int> interseccion, diferencia;
+        std::vector<std::unordered_set<int>> deletedP;
+        while (!W.empty()) {
+            A = W[0];
+            W.erase(W.begin());
+            for (int i = 0; i < 2; ++i) {
+                X = get_X(A, i);
+                for (auto setY : P) {
+                    if (std::find(deletedP.begin(), deletedP.end(), setY) == deletedP.end()) {
+                        interseccion.clear();
+                        for (auto e : X) {
+                            if (setY.find(e) != setY.end())
+                                interseccion.insert(e);
+                        }
+                        diferencia.clear();
+                        for (auto e : setY) {
+                            if (interseccion.find(e) == interseccion.end())
+                                diferencia.insert(e);
+                        }
+                        if (!interseccion.empty() && !diferencia.empty()) {
+                            P.push_back(interseccion);
+                            P.push_back(diferencia);
+
+                            if (std::find(W.begin(), W.end(), setY) != W.end()) {
+                                W.erase(std::find(W.begin(), W.end(), setY));
+                                W.push_back(interseccion);
+                                W.push_back(diferencia);
+                            } else {
+                                if (interseccion.size() <= diferencia.size())
+                                    W.push_back(interseccion);
+                                else
+                                    W.push_back(diferencia);
+                            }
+                            //P.erase(setY);
+                            deletedP.push_back(setY);
+                        }
+                    }
+                }
+            }
+        }
+        std::vector<std::unordered_set<int>> final;
+        for (auto c : P) {
+            if (std::find(deletedP.begin(), deletedP.end(), c) == deletedP.end())
+                final.push_back(c);
+        }
+        return final;
+    }
+
+    dfa convertDFAHopcroft(std::vector<std::unordered_set<int>> P) {
+        std::vector<int> v;
+        for (const auto &key: trans)
+            v.push_back(key.first);
+
+        DisjoinSetTree<int> ds(v);
+        ds.MakeSet();
+        int prev;
+        bool flag = false;
+        for (int i = 0; i < P.size(); ++i) {
+            for (auto e : P[i]) {
+                if (flag) {
+                    ds.Union(e, prev);
+                }
+                prev = e;
+                flag = true;
+            }
+            flag = false;
+        }
+        auto sets = ds.getSets();
+        transitions new_trans;
+        std::unordered_map<int, int> numeration;
+        int cont = 0;
+        for (
+            const auto &key
+                : sets)
+            numeration[key.first] = cont++;
+
+        for (const auto &key: sets) {
+            new_trans[numeration[key.first]] = std::pair<int, int>();
+            new_trans[numeration[key.first]].first = numeration[ds.Find(trans[key.first].first)];
+            new_trans[numeration[key.first]].second = numeration[ds.Find(trans[key.first].second)];
+        }
+        int begin = numeration[ds.Find(initial)];
+        std::unordered_set<int> final;
+        for (const auto &k : final_states) {
+            final.insert(numeration[ds.Find(k)]);
+        }
+        return {begin, final, new_trans};
+    }
+
 
     std::pair<int, double> question1() {
         clock_t start, end;
@@ -534,7 +663,7 @@ public:
             if (reachable.find(i.first) == reachable.end())
                 to_remove.push_back(i.first);
 
-        std::sort(to_remove.begin(), to_remove.end());
+        /*std::sort(to_remove.begin(), to_remove.end());
         transitions temp;
         int cont = 0;
         for (const auto &i : to_remove) {
@@ -560,7 +689,7 @@ public:
             cont++;
             size--;
         }
-
+*/
         auto m = optimizedEquivalencyMatrix();
         auto huffmanMoore = huffman_moore(m);
         end = clock();
@@ -583,6 +712,34 @@ public:
             std::cout << e.second.second << std::endl;
         }
         return {std::get<2>(huffmanMoore).size(), time_taken};
+    }
+
+    std::pair<int, double> question5() {
+        clock_t start, end;
+        start = clock();
+
+        auto res = hopcroft();
+        auto new_dfa = convertDFAHopcroft(res);
+        end = clock();
+        auto time_taken = double(end - start) / double(CLOCKS_PER_SEC);
+        std::cout << "\nTiempo de demora 5: " << time_taken << "s\n";
+        std::cout << "..................";
+        std::cout << "\nOutput: Hopcroft\n";
+        std::cout << "..................\n";
+        std::cout << std::get<2>(new_dfa).size() << " " << std::get<0>(new_dfa) << " "
+                  << std::get<1>(new_dfa).size() << " ";
+        for (auto &e : std::get<1>(new_dfa))
+            std::cout << e << " ";
+        std::cout << std::endl;
+        for (auto &e : std::get<2>(new_dfa)) {
+            std::cout << e.first << " ";
+            std::cout << "0 ";
+            std::cout << e.second.first << std::endl;
+            std::cout << e.first << " ";
+            std::cout << "1 ";
+            std::cout << e.second.second << std::endl;
+        }
+        return {1, 3};
     }
 
 };
