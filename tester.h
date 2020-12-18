@@ -15,9 +15,9 @@ public:
             auto results2 = dfa.question2();
             auto results3 = dfa.question3();
             auto results4 = dfa.question4();
-            auto results5 = dfa.question4();
+            auto results5 = dfa.question5();
             // Verifico que el nuevo size de estados totales sea el mismo
-            assert(results1.first == results5.first);
+            assert(results1.first == results4.first);
             // Checking time performance: question 2 better/equal to question 1
             //if (check_time)
             //    assert(results1.second >= results2.second);
