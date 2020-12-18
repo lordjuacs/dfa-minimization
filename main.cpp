@@ -5,7 +5,7 @@ int main() {
     Tester tester(1000, 2, false);
 
 
-    //DFA dfa;
+   // DFA dfa;
     //auto results1 = dfa.question1();
     //auto result2 = dfa.question2();
     //auto result3 = dfa.question3();

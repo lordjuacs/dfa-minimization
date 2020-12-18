@@ -418,6 +418,8 @@ public:
 
         //printFinalStates();
         //printTransitions();
+        copy_final = final_states;
+        copy_trans = trans;
     }
 
     ~DFA() {}
@@ -475,7 +477,12 @@ public:
         }
         return X;
     }
-    
+
+    struct setPresent {
+        std::set<int> conj;
+        bool present;
+    };
+
     std::vector<std::unordered_set<int>> hopcroft() {
         trans = copy_trans;
         final_states = copy_final;
