@@ -475,12 +475,7 @@ public:
         }
         return X;
     }
-
-    struct setPresent {
-        std::set<int> conj;
-        bool present;
-    };
-
+    
     std::vector<std::unordered_set<int>> hopcroft() {
         trans = copy_trans;
         final_states = copy_final;
@@ -532,7 +527,6 @@ public:
                                 else
                                     W.push_back(diferencia);
                             }
-                            //P.erase(setY);
                             deletedP.push_back(setY);
                         }
                     }
