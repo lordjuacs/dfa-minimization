@@ -1,12 +1,12 @@
 #include "tester.h"
 
 int main() {
-    /*srand(time(NULL));
+    srand(time(NULL));
     Tester tester(1000, 2, false);
-*/
 
-    DFA dfa;
-    auto results1 = dfa.question1();
+
+    //DFA dfa;
+    //auto results1 = dfa.question1();
     //auto result2 = dfa.question2();
     //auto result3 = dfa.question3();
     //auto result4 = dfa.question4();

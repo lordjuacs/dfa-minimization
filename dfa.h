@@ -739,7 +739,7 @@ public:
             std::cout << "1 ";
             std::cout << e.second.second << std::endl;
         }
-        return {1, 3};
+        return {std::get<2>(new_dfa).size(), time_taken};
     }
 
 };
