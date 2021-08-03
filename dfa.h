@@ -743,4 +743,31 @@ public:
         return {std::get<2>(new_dfa).size(), time_taken};
     }
 
+    bool check_synchronizing_word() {
+        std::string cadena_check;
+        std::cout << "cadena sincronizadora a revisar:";
+        std::cin >> cadena_check;
+        int estado_llegada = -1;
+        int current;
+        for (auto pair : trans) {
+            current = pair.first;
+            for (auto w : cadena_check) {
+                int w_int = (int) w - 48;
+                current = w_int ? trans[current].second : trans[current].first;
+            }
+            if (estado_llegada != -1) {
+                if (current != estado_llegada) {
+                    std::cout << "ERROR: la cadena no lleva a un mismo estado partiendo de cualquier estado.\n";
+                    return false;
+                }
+            } else
+                estado_llegada = current;
+        }
+        std::cout << "Si es una cadena sincronizadora. \nPartiendo de cualquier estado lleva al estado "
+                  << estado_llegada << ".\n";
+        return true;
+    }
+
 };
+
+
